@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+x-amz-id-2: JigKCr/55LekmZG0jALAc3+QqvnvZ0D+WlyGgXX5bbMWMgY2wiyqR5heNOcwCQnJKCEybMuM3uw=
+x-amz-request-id: 3C9BE1408A1E6E87
+Date: Thu, 19 Oct 2017 19:13:14 GMT
+Last-Modified: Sun, 01 Jan 2012 17:23:29 GMT
+ETag: "94880b346c06b9e8c5a7e808b510f442"
+Content-Type: text/html
+Content-Length: 95
+Server: AmazonS3

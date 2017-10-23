@@ -1,0 +1,80 @@
+systemd-nspawn [OPTIONS...] [PATH] [ARGUMENTS...]
+
+Spawn a minimal namespace container for debugging, testing and building.
+
+  -h --help                 Show this help
+     --version              Print version string
+  -q --quiet                Do not show status information
+  -D --directory=PATH       Root directory for the container
+     --template=PATH        Initialize root directory from template directory,
+                            if missing
+  -x --ephemeral            Run container with snapshot of root directory, and
+                            remove it after exit
+  -i --image=PATH           File system device or disk image for the container
+  -a --as-pid2              Maintain a stub init as PID1, invoke binary as PID2
+  -b --boot                 Boot up full system (i.e. invoke init)
+     --chdir=PATH           Set working directory in the container
+  -u --user=USER            Run the command under specified user or uid
+  -M --machine=NAME         Set the machine name for the container
+     --uuid=UUID            Set a specific machine UUID for the container
+  -S --slice=SLICE          Place the container in the specified slice
+     --property=NAME=VALUE  Set scope unit property
+  -U --private-users=pick   Run within user namespace, pick UID/GID range automatically
+     --private-users[=UIDBASE[:NUIDS]]
+                            Run within user namespace, user configured UID/GID range
+     --private-user-chown   Adjust OS tree file ownership for private UID/GID range
+     --private-network      Disable network in container
+     --network-interface=INTERFACE
+                            Assign an existing network interface to the
+                            container
+     --network-macvlan=INTERFACE
+                            Create a macvlan network interface based on an
+                            existing network interface to the container
+     --network-ipvlan=INTERFACE
+                            Create a ipvlan network interface based on an
+                            existing network interface to the container
+  -n --network-veth         Add a virtual Ethernet connection between host
+                            and container
+     --network-veth-extra=HOSTIF[:CONTAINERIF]
+                            Add an additional virtual Ethernet link between
+                            host and container
+     --network-bridge=INTERFACE
+                            Add a virtual Ethernet connection between host
+                            and container and add it to an existing bridge on
+                            the host
+     --network-zone=NAME    Add a virtual Ethernet connection to the container,
+                            and add it to an automatically managed bridge interface
+  -p --port=[PROTOCOL:]HOSTPORT[:CONTAINERPORT]
+                            Expose a container IP port on the host
+  -Z --selinux-context=SECLABEL
+                            Set the SELinux security context to be used by
+                            processes in the container
+  -L --selinux-apifs-context=SECLABEL
+                            Set the SELinux security context to be used by
+                            API/tmpfs file systems in the container
+     --capability=CAP       In addition to the default, retain specified
+                            capability
+     --drop-capability=CAP  Drop the specified capability from the default set
+     --kill-signal=SIGNAL   Select signal to use for shutting down PID 1
+     --link-journal=MODE    Link up guest journal, one of no, auto, guest, 
+                            host, try-guest, try-host
+  -j                        Equivalent to --link-journal=try-guest
+     --read-only            Mount the root directory read-only
+     --bind=PATH[:PATH[:OPTIONS]]
+                            Bind mount a file or directory from the host into
+                            the container
+     --bind-ro=PATH[:PATH[:OPTIONS]
+                            Similar, but creates a read-only bind mount
+     --tmpfs=PATH:[OPTIONS] Mount an empty tmpfs to the specified directory
+     --overlay=PATH[:PATH...]:PATH
+                            Create an overlay mount from the host to 
+                            the container
+     --overlay-ro=PATH[:PATH...]:PATH
+                            Similar, but creates a read-only overlay mount
+  -E --setenv=NAME=VALUE    Pass an environment variable to PID 1
+     --share-system         Share system namespaces with host
+     --register=BOOLEAN     Register container as machine
+     --keep-unit            Do not register a scope for the machine, reuse
+                            the service unit nspawn is running in
+     --volatile[=MODE]      Run the system in volatile mode
+     --settings=BOOLEAN     Load additional settings from .nspawn file

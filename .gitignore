@@ -1,0 +1,7 @@
+
+# eclipse meta data
+.project
+
+# build files
+/target
+*.tar.gz

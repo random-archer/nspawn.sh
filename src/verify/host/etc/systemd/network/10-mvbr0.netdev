@@ -1,0 +1,10 @@
+
+# macvlan bridge
+# https://www.freedesktop.org/software/systemd/man/systemd.netdev.html
+
+[NetDev]
+Name=mvbr0
+Kind=macvlan
+ 
+[MACVLAN]
+Mode=bridge

@@ -1,0 +1,11 @@
+
+# macvlan network
+# https://www.freedesktop.org/software/systemd/man/systemd.network.html
+
+[Match]
+Name=mvbr0
+ 
+[Network]
+DHCP=ipv4
+IPForward=ipv4
+LinkLocalAddressing=no

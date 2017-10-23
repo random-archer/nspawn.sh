@@ -1,0 +1,12 @@
+
+# ethernet network
+# https://www.freedesktop.org/software/systemd/man/systemd.network.html
+
+[Match]
+Name=wire0
+
+[Network]
+DHCP=ipv4
+MACVLAN=mvbr0
+IPForward=ipv4
+LinkLocalAddressing=no

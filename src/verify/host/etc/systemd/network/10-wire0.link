@@ -1,0 +1,11 @@
+
+# ethernet link
+# https://www.freedesktop.org/software/systemd/man/systemd.link.html
+
+[Match]
+# kernel names
+OriginalName=eth0
+
+[Link]
+# rename to make known
+Name=wire0
