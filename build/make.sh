@@ -34,6 +34,8 @@ tar -c -z -f "$archive" -C "$source" "."
 
 cat "$inst_subs" "$archive" > "$program"
 
-chmod ugo+x "$program"
+chmod +x "$program"
 
 sudo rsync -a "$program" "$install"
+    
+ls -ls "$install"

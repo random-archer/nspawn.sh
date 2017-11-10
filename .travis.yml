@@ -1,39 +1,38 @@
 
-# use bash v 4.3 form ubuntu 14
-language: shell
-
 # need for install
 sudo: required
 
+# uses bash v 4.3 form ubuntu 14
+language: shell
+
 env: 
   global:
-    # current bash build v 4.4
-    - BASH_HOME=/tmp/bash_home
-    - BASH_EXEC=$BASH_HOME/bin/bash
+  #
   
 cache:
   directories:
-    # bash build result
-    - $BASH_HOME/bin
+    # docker pull cache
+    - $HOME/docker
     
+services:
+  - docker
+      
 before_install:
   - echo $(id) # verify user
   - echo $HOME # verify home
+  - docker --version # verify docker
 
 install:
-    # make current bash
-  - build/ubuntu/bash.sh
+  #
 
 before_script:
-  # current bash version
-  - $BASH_EXEC --version
+  # provision container
+  - build/docker/setup.sh
 
 script: 
-  # produce nspawn.sh
-  - $BASH_EXEC build/make.sh
-  # invoke unit tests
-  - $BASH_EXEC src/test/exec.sh
+  # invoke tests in container
+  - build/docker/verify.sh
 
 after_script:
   # session complete
-  echo "done"
+  - echo "done"

@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -134,6 +134,12 @@ ns_image_push_put() {
             ns_a_mkpar file="$url_path"
             ns_a_sudo rsync -a "$store_archive" "$url_path"
             ;;
+        s3*)
+            false # TODO
+            ;;
+        bintray*)
+            false # TODO
+            ;;
         *)
             ns_log_fail "wrong scheme in url '$url'"
             ;;
@@ -174,9 +180,9 @@ ns_image_pull_config() {
     local file="$store_meta"
     
     case "$media_type" in
-        "nspawn") ns_image_pull_apply ;; # parse file 
-        "plain") true ;; # no meta in plain image
-        "aci") ns_log_warn "TODO aci" ;; 
+        nspawn) ns_image_pull_apply ;; # parse file 
+        plain) true ;; # no meta in plain image
+        aci) ns_log_warn "TODO aci" ;; 
         *) false ;;
     esac
 }
@@ -205,7 +211,7 @@ ns_image_pull_get() {
             local curl_cmd="curl $(ns_curl_opts_get)"
 
             # remote time stamp
-            local head_text=$($curl_cmd --head "$url")
+            local head_text=$(ns_a_sudo $curl_cmd --head "$url")
             local time_stamp=$(ns_curl_parse_last_modified content="$head_text")
             local stamp_file="$store_archive.stamp" 
             ns_a_sudo touch --date="$time_stamp" "$stamp_file"
@@ -225,6 +231,12 @@ ns_image_pull_get() {
             ;;
         file*)
             ns_a_sudo rsync -a "$url_path" "$store_archive"
+            ;;
+        s3*)
+            false # TODO
+            ;;
+        bintray*)
+            false # TODO
             ;;
         *)
             ns_log_fail "wrong scheme in url: '$url'"
@@ -258,11 +270,11 @@ ns_image_pull_unpack() {
 
     # extract archive                                     
     case "$media_type" in
-        "iso")
+        iso)
             false # TODO
             ns_a_sudo 7z e -o"$store_extract" "$store_archive" 
             ;;
-        "nspawn" | "plain" | "aci")
+        nspawn | plain | aci)
             local packer="$(ns_image_packer_tar_gz)"
             local tar_opts=""
             ns_a_sudo tar $tar_opts \
@@ -279,10 +291,10 @@ ns_image_pull_unpack() {
 
     # copy content
     case ${ns_CONF[image_pull_copy]} in
-        "move") # atomic folder replace
+        move) # atomic folder replace
             ns_a_sudo mv -f "$store_tempdir" "$store_extract"
             ;;
-        "sync") # individual file update
+        sync) # individual file update
             ns_a_sudo rsync -a "$store_tempdir"/ "$store_extract" # note "/"
             ns_a_sudo rm -r -f "$store_tempdir" # cleanup
             ;;

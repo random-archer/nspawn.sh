@@ -4,11 +4,11 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
-# build command implementation
+# build command implementations
 #
 
 # change global config
@@ -38,7 +38,7 @@ ns_do_image() {
     ns_log_info
     local "$@" ; ns_log_req url
 
-    local machine_id=$(ns_a_prog_name)-$(ns_a_guid_char)
+    local machine_id="build-$(ns_a_guid_char)"
             
     ns_image_define # url
     
@@ -50,7 +50,7 @@ ns_do_image() {
     local context=; printf -v context "%q" "$(declare -p image machine)"
 
     # store cleanup pre-build  
-    ns_build_reset url="${image[url]}"
+    ns_build_reset # image
     
     # store cleanup post-build
     ns_trap_hook_exit entry="ns_do_exit context=$context"
@@ -61,10 +61,10 @@ ns_do_image() {
 ns_do_exit() {
     ns_log_dbug
         
-    [[ ${ns_STATE[do_exit]} == yes ]] && return 0 ; ns_STATE[do_exit]=yes
+    [[ ${ns_STATE[cmd_exit]} == yes ]] && return 0 ; ns_STATE[cmd_exit]=yes
 
     # de-serialize execution context
-    eval "$@" ; eval "$context" # => image machine
+    eval "local $@" ; eval "$context" # image machine
     
     ns_build_delete url="${image[url]}"
     
@@ -88,14 +88,25 @@ ns_do_copy() {
     local base_dir="${ns_CONF[base_dir]}" 
     local root_dir="${machine[root_dir]}"
     
-    local source="$base_dir/$src" 
-    local target="$root_dir/$dst"
+    # on host
+    local source=;
+    if [[ $src =~ ^/.*$ ]] ; then
+        source="$src" # absolute
+    else
+        source="$base_dir/$src" # relative
+    fi
     
+    # verify source present
     [[ -e "$source" ]] || ns_log_fail "missing source '$source'" 
     
-    # rsync convention for folders
-    [[ -d "$source" && "$source" =~ ^.*/$ ]] || source="$source/" 
-    
+    # rsync expects folder with trailing "/"
+    if [[ -d "$source" ]] ; then
+        [[ "$source" =~ ^.*/$ ]] || source="$source/"
+    fi 
+
+    # in container
+    local target="$root_dir/$dst" 
+            
     ns_log_dbug "$source -> $target"
     
     ns_a_mkpar file="$target"
@@ -115,38 +126,53 @@ ns_do_def() {
 }
 
 ns_do_get() {
-    false # TODO
+    ns_log_info
+    local "$@" ; ns_log_req url path
+    
+    local file="$(mktemp -u)"
+    
+    eval "$(ns_url_parse)"
+    local curl_cmd="curl $(ns_curl_opts_get)"
+    local curl_text=$(ns_a_sudo $curl_cmd --output "$file" "$url")
+    
+    local src="$file"
+    local dst="$path"
+    ns_do_copy # src dst
+    
+    ns_a_sudo rm -f "$file"
+    
 }
 
 ns_do_env() {
     ns_log_info
+    
     local entry= ; for entry in "$@" ; do
         # inject in build
         declare -g "$entry"
         # inject in profile 
-        ns_do_set "Environment=\"$entry\"" # must quote
+        ns_do_prof "Environment=\"$entry\"" # must quote
     done
 }
 
 ns_do_cap() {
     ns_log_info
     local "$@" ; 
-    [[ "$add" ]] && { ns_do_set Capability="$add" ; return 0 ;}
-    [[ "$rem" ]] && { ns_do_set DropCapability="$rem" ; return 0 ;}
+    [[ "$add" ]] && { ns_do_prof Capability="$add" ; return 0 ; }
+    [[ "$rem" ]] && { ns_do_prof DropCapability="$rem" ; return 0 ; }
     ns_log_fail "invalid command"
 }
 
 ns_do_exec() {
     ns_log_info
-    ns_do_set Boot="no" Parameters="$*" KillSignal="TERM"
+    ns_do_prof Boot="no" Parameters="$*" KillSignal="TERM"
 }
 
 ns_do_init() {
     ns_log_info
-    ns_do_set Boot="yes" Parameters="$*" # render parameters
+    ns_do_prof Boot="yes" Parameters="$*" # render parameters
 }
 
-ns_do_set() {
+ns_do_prof() {
     ns_log_info
     local entry= ; for entry in "$@" ; do
         # comment re-write
@@ -156,19 +182,36 @@ ns_do_set() {
     done
 }
 
-# invoke nspawn
-ns_do_run() {
+ns_do_unit() {
     ns_log_info
+    false # TODO
+}
+
+# invoke nspawn
+ns_do_run_sysd() {
+    ns_log_dbug
 
     ns_build_create
     
     local machine=${machine[id]}
     
-    ns_a_sudo systemd-nspawn --quiet --machine "$machine" "$@" || ns_log_fail "systemd-nspawn failure" 
+    local args=(
+        --quiet
+        --machine "$machine"
+        --uuid=$(ns_a_guid) # TODO expose to config
+    )
+    
+    ns_a_sudo systemd-nspawn "${args[@]}" "$@" || ns_log_fail "systemd-nspawn failure" 
+}
+
+# run every time, regardless of previous state
+ns_do_run_avid() {
+    ns_log_info
+    ns_do_run_sysd "$@"
 }
 
 # run only one time during multiple build sessions
-ns_do_run_once() {
+ns_do_run_lazy() {
     ns_log_info
         
     local url="${image[url]}"
@@ -183,7 +226,7 @@ ns_do_run_once() {
     local once_dir="$data_dir/run_once"
     
     # ensure folder present
-    ns_a_mkdir dir="$once_dir"
+    ns_a_sudo mkdir -p "$once_dir"
     
     # make command digest
     local once_hash=$(ns_a_text_hash text="$*")
@@ -196,9 +239,9 @@ ns_do_run_once() {
         return 0
     else
         ns_log_dbug "apply invocation"
-        ns_do_run "$@" # must return ok 
-        echo "$@" | ns_a_save file="$once_file"
+        ns_do_run_sysd "$@" # must return ok 
         ns_do_sync # persist change after run
+        echo "$@" | ns_a_save file="$once_file" # mark complete
     fi
 }
 
@@ -215,7 +258,7 @@ ns_do_sync() {
     eval "$(ns_store_space)"
     
     # ensure copy target
-    ns_a_mkdir dir="$store_extract"
+    ns_a_sudo mkdir -p "$store_extract"
     
     # transfer from transient to permanent store 
     ns_a_sudo rsync -a "$root_dir"/ "$store_extract"
@@ -225,6 +268,9 @@ ns_do_sync() {
 ns_do_push() {
     ns_log_info
     local "$@" ;
+
+    # for all-lazy build
+    ns_build_create
 
     local url=${image[url]}
 
@@ -243,17 +289,4 @@ ns_do_push_default() {
 # flatten all overlays into one
 ns_do_push_flatten() { 
     false # TODO
-}
-
-# protect commands
-ns_do_cmd_lock() {
-    local IFS=$'\n'
-    local decl="declare -f " # report prefix
-    local regx="$decl[A-Z]+" # upper case func names
-    local func=;
-    local line=; for line in $(declare -F) ; do
-        [[ $line =~ $regx ]] || continue
-        func=${line##$decl}
-        declare -f -r "$func" # make read only
-    done
 }

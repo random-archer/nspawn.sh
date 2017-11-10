@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -31,11 +31,15 @@ ns_main_setup_debug() {
 
 # build script mode
 ns_main_build() {
-    ns_log_note
-    local build="$1" ; shift 
+    ns_log_dbug
     
-    #ns_a_args_assert "$@" 
-    #local "$@" ; ns_do_config # XXX
+    # parse invoke: 'bash nspawn.sh build.sh [args]'
+    local build="$1"
+    shift 1
+
+    # apply config entries    
+    ns_a_args_assert "$@"
+    ns_do_config "$@"
     
     # fresh images for build
     ns_STATE[image_pull_check]=yes
@@ -47,21 +51,24 @@ ns_main_build() {
     eval "$(ns_image_declare)"
     eval "$(ns_machine_declare)"
      
-    source "$build" # execute build script
+    # execute build script
+    source "$build" 
 }
 
 # user command mode
 ns_main_command() {
-    ns_log_note
+    ns_log_dbug
     
+    # apply config entries    
     ns_a_args_assert "$@"
-     
     ns_do_config "$@"
-    
-    #ns_log_req run
-    
-    local "$@"
-    
+
+    # inject arguments
+    eval "$(ns_parse_to_map "$@")"
+    local run=${map[run]-} 
+        
+    # parse run statement command and action
+    [[ $run ]] || ns_log_fail "missing 'run' statement"
     local command=${run%%/*} action=${run##*/}
     
     case "$command" in
@@ -72,10 +79,25 @@ ns_main_command() {
                 ne*) ns_run_list_network ;;
                 ma*) ns_run_list_machine ;; un*) ns_run_list_unit ;;
                 ar*) ns_run_list_archive ;; ex*) ns_run_list_extract ;; 
-                *) ns_log_fail "wrong 'list' action '$action', , $(ns_main_tip)" ;;
+                *) ns_log_fail "wrong 'list' action '$action', $(ns_main_tip)" ;;
+            esac ;;
+        ke*) # keep
+            case "$action" in
+                cl*) ns_keep_cmd_clean ;;
+                ins*) ns_keep_cmd_install ;;
+                rem*) ns_keep_cmd_remove ;;
+                *) ns_log_fail "wrong 'keep' action '$action', $(ns_main_tip)" ;;
             esac ;;
         un*) # unit
+            
+            #
+            local name=${map[name]-} 
+            [[ $name ]] || ns_log_fail "missing machine 'name'"
+            local url=${map[url]-} 
+            [[ $url ]] || ns_log_fail "missing image 'url'"
+                
             local $(ns_unit_args)
+            
             # root context
             eval "$(ns_image_declare)"
             eval "$(ns_machine_declare)"
@@ -97,8 +119,10 @@ ns_main_command() {
 
 # detect if invoked from a build file
 ns_main_has_script() { 
+    # match:
     local line=$(file -b "$1")
-    [[ $line =~ shell && $line =~ scrip && $line =~ text ]]
+    # 'Bourne-Again shell script, ASCII text executable'
+    [[ $line =~ shell && $line =~ script && $line =~ text ]]
 }
 
 # verify shell interpreter
@@ -113,30 +137,20 @@ ns_main_bash_assert() {
 }
 
 # verify dependencies 
-ns_main_deps_apply() { 
-    &> /dev/null type -p "$entry" || list+=("$entry")
+ns_main_deps_apply() { # list
+    &>/dev/null type -p "$entry" || list+=("$entry")
 }
 
 # verify dependencies 
 ns_main_deps_assert() {
-    
-    local required=( # required dependency
-        sudo md5sum mkdir rm dd file grep sed tar gzip mktemp
-        host netcat curl rsync systemd-nspawn systemctl mount umount
-    ) 
-
-    local optional=( # optional dependency
-        pigz 7z nsenter # s3-get s3-put
-    ) 
-    
+    # required
     local list=()
-    ns_a_list_apply list=required apply=ns_main_deps_apply
+    ns_a_list_apply list=ns_main_REQUIRED apply=ns_main_deps_apply
     [[ ! ${list[@]-} ]] || ns_log_fail "missing required programs: ${list[*]}"
-    
+    # optional
     local list=()
-    ns_a_list_apply list=optional apply=ns_main_deps_apply
+    ns_a_list_apply list=ns_main_OPTIONAL apply=ns_main_deps_apply
     [[ ! ${list[@]-} ]] || ns_log_warn "missing optional programs: ${list[*]}"
-    
 }
 
 # verify sudo access
@@ -153,26 +167,33 @@ ns_exit() {
 
 # program entry point
 ns_main() {
-    
+
+    # signal handler
     ns_trap_init
-    ns_do_cmd_lock
     
+    # prerequisites
     ns_main_bash_assert
     ns_main_deps_assert
     ns_main_sudo_assert
     
-    ns_log_args "$(ns_a_prog_version)" "$@" # XXX
-        
+    # report arguments    
+    ns_log_args "$(ns_a_prog_sign)" "$@"
+    
+    # program mode
     if [[ "0" == "$#" ]] ; then
-        ns_STATE[main]="none" # invalid
+        # invalid input
+        ns_STATE[main]="help" 
         ns_help_text
     elif [[ "---" == "$1" ]] ; then
-        ns_STATE[main]="test" # development
+        # developer mode
+        ns_STATE[main]="test" 
     elif ns_main_has_script "$1" ; then
-        ns_STATE[main]="build" # build image
+        # build image
+        ns_STATE[main]="build" 
         ns_main_build "$@"
     else
-        ns_STATE[main]="command" # manage container
+        # manage container
+        ns_STATE[main]="command" 
         ns_main_command "$@"
     fi 
 }

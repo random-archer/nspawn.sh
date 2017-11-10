@@ -1,6 +1,10 @@
 #!/bin/sh
 
-set -e
+#
+# dropbear service unit
+#
+
+set -e -u
 
 for kind in rsa dss ecdsa ; do
     echo "ensure key '$kind'"

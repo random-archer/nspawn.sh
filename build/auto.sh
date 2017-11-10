@@ -14,7 +14,6 @@ readonly auto_test="$auto_proj/src/test"
 
 # fail fast
 auto_setup_shell() {
-    set -o posix # use standard mode
     set -o nounset # fail on unset variables
     set -o errexit  # fail on non-zero function return
     set -o errtrace # apply ERR trap throughout call stack 
@@ -38,11 +37,23 @@ auto_invoke_build() {
     "$auto_base/make.sh"
 }
 
+# remove monitor
+auto_monitor_stop() {
+    killall inotifywait || true
+}
+ 
+# setup interrupts   
+auto_trap_init() {
+    trap auto_trap_on_exit EXIT
+}
+
+# project cleanup
+auto_trap_on_exit() {
+    auto_monitor_stop
+}
+
 # change detector
-auto_monitor_source() {
-    # remove monitor
-    killall inotifywait
-    # activate monitor
+auto_monitor_run() {
     auto_setup_shell
     inotifywait \
         --recursive \
@@ -56,10 +67,7 @@ auto_monitor_source() {
         done
 }
 
-# protect name space
-readonly -f auto_setup_shell
-readonly -f auto_invoke_build
-readonly -f auto_monitor_source
-
 # automatic build cycle
-auto_monitor_source
+auto_trap_init
+auto_monitor_stop
+auto_monitor_run

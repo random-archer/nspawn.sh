@@ -4,14 +4,13 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
 # unit test executor
 #
 
-set -o posix # use standard mode
 set -o nounset # fail on unset variables
 set -o errexit  # fail on non-zero function return
 set -o errtrace # apply ERR trap throughout call stack 
@@ -24,6 +23,7 @@ exec_unit_test() {
     
     local count_invoked=0
     local count_failure=0
+    local failure_list=()
 
     local IFS=$'\n'
     local base="${BASH_SOURCE%/*}"
@@ -39,6 +39,7 @@ exec_unit_test() {
         # debug run
         echo "------- $unit -------"
         (( count_failure++ )) || true
+        failure_list+=("$unit")
         $BASH -x "$unit" || true
          
     done
@@ -48,6 +49,10 @@ exec_unit_test() {
     echo "----------------------------"
     echo "count_invoked=$count_invoked"
     echo "count_failure=$count_failure"
+    echo "failure_list:"
+    local entry=; for entry in "${failure_list[@]}" ; do
+        echo "   $entry"
+    done 
     
     # fail on error
     (( count_failure == 0 ))

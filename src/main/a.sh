@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -27,20 +27,28 @@ ns_a_guid_char() {
     echo "${guid//-/}" 
 }
 
-# invoke as root when needed
+# invoke as root on demand
 ns_a_sudo() { 
     ns_log_note "$@" 
     ns_a_has_root && "$@" || sudo -E "$@"
 }
 
+# generate sudo on demand
+ns_a_suno() {
+    ns_a_has_root && echo "" || echo "sudo -E"
+}
+    
 # detect root user
 ns_a_has_root() { 
     [[ $EUID == 0 ]] 
 }
 
 # read in-line here-doc
-ns_a_define() {  
-    local IFS=$'\n' ; read -r -d '' ${1} || return 0
+ns_a_define() { 
+    # read multiple lines
+    # use new-line separators
+    # use timeout to detect missing << EOF
+    local IFS=$'\n' ; read -r -t 0.1 -d '' $1 || return 0
 }
 
 # self name
@@ -48,8 +56,8 @@ ns_a_prog_name() {
     echo "$ns_build_name"
 }
 
-# self version
-ns_a_prog_version() {
+# self signature
+ns_a_prog_sign() {
     echo "$ns_build_name/$ns_build_stamp"
 }
 
@@ -82,35 +90,26 @@ ns_a_save() {
     ns_a_sudo dd status=none of="$file"
 }
 
-# make folder tree
-ns_a_mkdir() { 
-    local "$@" # dir
-    ns_a_sudo mkdir -p "$dir"
-}
-
-# kill folder tree
-ns_a_rmdir() { 
-    local "$@" # dir
-    ns_a_sudo rm -r -f "$dir"
-}
-
 # make parent folders of a path
 ns_a_mkpar() { 
     local "$@" # file
-    ns_a_mkdir dir="${file%/*}"
+    ns_a_sudo mkdir -p "${file%/*}"
 }
 
-# verify variable injection
+# verify key=val injection format
 ns_a_args_assert() { 
-    local "$@" && return 0
-    ns_log_fail "invalid 'key=value' args line: '$@'" 
+    # ns_log_note
+    local entry=; for entry in "$@" ; do
+        [[ $entry == *"="* ]] && continue
+        ns_log_fail "invalid 'key=value' args line: '$@'" 
+    done
 }
 
 # verify entry is present in array
 ns_a_array_contains() { 
-    local "$@"
+    local "$@" # array entry
     local -n list="$array" # de-reference
-    local item= ; for item in "${list[@]-}" ; do 
+    local item=; for item in "${list[@]-}" ; do 
         [[ $item == $entry ]] && return 0 # present
     done
     return 1 # missing
@@ -145,15 +144,17 @@ ns_a_text_hash() {
     echo "${hash[0]}"
 }
 
-# verify if variable is declared
+# verify if named variable is declared
 ns_a_has_declare() {
-    &>/dev/null declare -p "$1"
+    &>/dev/null declare -p "$1" # name
 }
 
-# read scalar/array declared value
+# read raw named declared variable value
 ns_a_read_declare() {
-    local entry=$(declare -p "$1")
-    echo "${entry#*=}" # cut [declare -? name=]
+    local entry=$(declare -p "$1") # name
+    entry=${entry#*=} # cut [declare -? name=]
+    entry=$(ns_parse_rem_quote_any "$entry")
+    echo "$entry"
 }
 
 # dir-name part of the path 
@@ -180,4 +181,48 @@ ns_a_char_reps() {
     for (( item=1 ; item <= reps ; item++ )) ; do
         printf "$char"
     done
+}
+
+# list tree to path
+ns_a_path_explode() {
+    local "$@" # path
+    # special case
+    [[ $path == "/" ]] && echo "/" && return 0
+    # split into array  
+    local IFS=$'/' ; local -a list=( $path ) ; unset IFS
+    # re-build partial paths
+    local index=0 length=${#list[@]}
+    while (( index <= length )) ; do
+        # select subset
+        local -a scan=( "${list[@]:0:$index}" )
+        # merge path back
+        local line=$(IFS=$'/' ; echo "${scan[*]}")
+        # non empty entries
+        [[ $line ]] && echo "$line"
+        # iterate 
+        (( index++ )) || true
+    done
+}
+
+# create/delete a resource
+ns_a_resource() {
+    eval "local $@" ; ns_log_req mode file
+    case "$mode" in
+        create)
+            ns_log_req text
+            echo "$text" | ns_a_save
+            ;;
+        delete)
+            ns_a_sudo rm -f "$file" 
+            ;;
+        ignore) 
+            ;;
+        *) ns_log_fail "wrong mode '$mode'" ;;
+    esac 
+    #
+}
+
+# find system temp dir
+ns_a_temp_dir() {
+    local temp=$(mktemp -u -t temp.XXXXXXXXXX) && echo ${temp%/*}
 }

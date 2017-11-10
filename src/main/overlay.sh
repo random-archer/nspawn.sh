@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -32,7 +32,7 @@ ns_overlay_extract() {
     done
     
     # return overlay path line with path separator
-    local IFS=':' ; echo "${overlay[*]}" ; unset IFS 
+    local IFS=':' ; echo "${overlay[*]}" ; unset IFS
 }
 
 # generate mount options

@@ -4,11 +4,11 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
-# setup shared variables
+# setup variables
 #
 
 # protect value objects
@@ -16,6 +16,7 @@ ns_init_lock() {
     declare -r ns_VAL
     declare -r ns_help_CONF
     declare -r ns_help_BUILD
+    declare -r ns_LOG
 }
 
 # global constants
@@ -55,7 +56,7 @@ ns_init_val() {
     
     # service.nspawn keys with new values replacing old                                                
     ns_VAL[prof_all_override]="${ns_VAL[prof_exec_override]}|${ns_VAL[prof_files_override]}|${ns_VAL[prof_network_override]}" 
-                            
+  
     # service.nspawn keys to remove during build                                                
     ns_VAL[prof_build_filter]="Boot=|Parameters=|KillSignal=|Bind=|BindReadOnly=|Zone=|Port=|Bridge=|MACVLAN="                                                
 
@@ -68,7 +69,6 @@ ns_init_val() {
     ns_VAL[storage_dir]="/var/lib/nspawn.sh" # root of nspawn.sh image/machine resources 
     ns_VAL[archive_dir]="${ns_VAL[storage_dir]}/archive" # images download folder
     ns_VAL[extract_dir]="${ns_VAL[storage_dir]}/extract" # uncompressed images folder
-    ns_VAL[locator_dir]="${ns_VAL[storage_dir]}/locator" # resource location folder, find machine by id
     ns_VAL[runtime_dir]="${ns_VAL[storage_dir]}/runtime" # live machine instance runtime container folders
     
 }
@@ -79,17 +79,17 @@ ns_init_state() {
     declare -g -A ns_STATE=() # transient variables
     
     ns_STATE[main]=none # mode of script execution
-    ns_STATE[terminate]=ok # mode of script termination
+    ns_STATE[terminate]=none # mode of script termination
     
     ns_STATE[proxy]=no # proxy was configured
     ns_STATE[proxy_http]="" # discovered plain proxy
     ns_STATE[proxy_https]="" # discovered secure proxy
     
-    ns_STATE[do_image]=no # command memento
-    ns_STATE[do_alter]=no # command memento
-    ns_STATE[do_push]=no # command memento
-    ns_STATE[do_exit]=no # command memento
-    ns_STATE[do_run]=no # command memento
+    ns_STATE[cmd_image]=no # command memento
+    ns_STATE[cmd_alter]=no # command memento
+    ns_STATE[cmd_run]=no # command memento
+    ns_STATE[cmd_push]=no # command memento
+    ns_STATE[cmd_exit]=no # command memento
                 
     ns_STATE[image_define]=no # image was initialized
     ns_STATE[machine_define]=no # machine was initialized
@@ -101,7 +101,6 @@ ns_init_state() {
     
 }
 
-
 # global configuration
 ns_init_config() { 
     
@@ -109,8 +108,20 @@ ns_init_config() {
     declare -g -A ns_help_CONF=() # help for global configuration
     declare -g -A ns_help_BUILD=() # help for build commands
         
-    ns_CONF[log_level]=1 # logger level at startup
+    ns_CONF[log_level]=2 # logger level at startup
     ns_help_CONF[log_level]="log level: FAIL=0 WARN=1, INFO=2, DBUG=3, NOTE=4"
+
+    ns_CONF[log_color]="auto"
+    ns_help_CONF[log_color]="logger color output mode: 'auto': when detected; 'yes': force on; 'no': force off"
+
+    ns_CONF[log_truncate]="${COLUMNS-160}"
+    ns_help_CONF[log_truncate]="truncate logger lines at this length"
+                                
+    ns_CONF[log_color_vars]="JENKINS_HOME HUDSON_HOME"
+    ns_help_CONF[log_color_vars]="list of names of environment variables, when present mean can use color in output"
+
+    ns_CONF[log_no_color_vars]="SUDO_COMMAND ANSIBLE_HOST"
+    ns_help_CONF[log_no_color_vars]="list of names of environment variables, when present mean can NOT use color in output"
         
     ns_CONF[base_dir]=invalid
     ns_help_CONF[base_dir]="folder containing 'build.sh' script, to access build resources"
@@ -121,12 +132,21 @@ ns_init_config() {
         'sync' : individual file update, safe for live instance update; \
     "
                         
+    ns_CONF[run_shell]="/bin/sh"
+    ns_help_CONF[run_shell]="shell path in the container"
+                                                                                                
     ns_CONF[curl_opts]="--insecure --silent --show-error --fail --location"
-    ns_help_CONF[curl_opts]="curl invocation options for both get and put "
-                                                
+    ns_help_CONF[curl_opts]="curl invocation options for both get and put"
+
+    ns_CONF[curl_host_wait]="3"
+    ns_help_CONF[curl_host_wait]="host resolution timeout in seconds"
+                                                                                                                                                                                                                                                                                                                                                                                                
     ns_CONF[auth_path]="${ns_VAL[etc_dir]}/auth:${ns_VAL[home_dir]}/auth"
     ns_help_CONF[auth_path]="host login credential files search path"
     
+    ns_CONF[keeper_timer_calendar]="*-*-* 03:00:00"
+    ns_help_CONF[keeper_timer_calendar]="schedule for keeper service"
+        
     # developer options
     ns_CONF[dbug_trap_skip_exit]=no
         
@@ -153,8 +173,9 @@ ns_init_config() {
     ns_CONF[build_unit_keep]=no
     ns_help_CONF[build_unit_keep]="do not remove transient build generated service units to debug"
         
-    ns_CONF[build_store_reset]=yes
-    
+    ns_CONF[build_store_reset]=no
+    ns_help_CONF[build_store_reset]="cleanup build store archive and extract before each build session"
+        
     ns_CONF[build_import_env]=yes
     ns_help_CONF[build_import_env]="import machine env vars into build script environment"
         
@@ -186,22 +207,71 @@ ns_init_config() {
     ns_help_BUILD[PULL]="url=... # transitively download remote image and make it part of container overlay"
     ns_help_BUILD[COPY]="src=... dst=... | path=a:b:c:... # copy local resource into the container"
     ns_help_BUILD[DEF]="path=... text=... # provision in-line file in the container"
-    ns_help_BUILD[GET]="url=... path=... type=... # download remote file and place in the container"
-    ns_help_BUILD[ENV]="key=value, ... # synonym for SET Environment=key=value"
-    ns_help_BUILD[CAP]="add=C1,C2,... del=C3,C4... # synonym for SET Capabilities='C1 C2 ...' DropCapabilities='C3 C4 ...'"
+    ns_help_BUILD[GET]="url=... path=... type=... # download remote 'file' and place in the container 'path'"
+    ns_help_BUILD[ENV]="key=value, ... # synonym for PROF Environment=key=value"
+    ns_help_BUILD[CAP]="add=C1,C2,... del=C3,C4... # synonym for PROF Capabilities='C1 C2 ...' DropCapabilities='C3 C4 ...'"
     ns_help_BUILD[SH]="command # synonym for RUN sh -c 'command'"
-    ns_help_BUILD[EXEC]="command # synonym for SET Boot=no  Parameters=command"
-    ns_help_BUILD[INIT]="command # synonym for SET Boot=yes Parameters=command"
-    ns_help_BUILD[SET]="see://[systemd.nspawn — Container settings]  # configure container execution parameters"
+    ns_help_BUILD[EXEC]="command # synonym for PROF Boot=no  Parameters=command"
+    ns_help_BUILD[INIT]="command # synonym for PROF Boot=yes Parameters=command"
+    ns_help_BUILD[PROF]="see://[systemd.nspawn — Container settings]  # configure container execution parameters"
     ns_help_BUILD[RUN]="command # invoke user build command inside the container"
     ns_help_BUILD[PUSH]="# push image result to the declared url"
     ns_help_BUILD[EXIT]="# build termination statement"
     
 }
 
+# logger settings
+ns_init_log() {
+    declare -g -A ns_LOG=(
+
+        # https://misc.flogisoft.com/bash/tip_colors_and_formatting
+        
+        [args/text]="----" [args/color]='\e[92m' # Light green
+        [trap/text]="TRAP" [trap/color]='\e[91m' # Light Red
+        
+        [0/text]="FAIL" [0/color]='\e[31m' # Red
+        [1/text]="WARN" [1/color]='\e[35m' # Purple
+        [2/text]="INFO" [2/color]='\e[36m' # Cyan
+        [3/text]="DBUG" [3/color]='\e[39m' # Default
+        [4/text]="NOTE" [4/color]='\e[90m' # Dark Gray
+        [color_fill]='\e[K' # clear till end of line
+        [color_none]='\e[0m' # reset foreground color
+        
+        [color_back_set]='\e[40m' # Black
+        [color_back_unset]='\e[49m' # restore background color
+                
+        [has_color]=$(ns_log_has_color && echo yes || echo no)
+    )
+}
+
+# program dependency
+ns_init_progs() {
+    
+    # required dependency
+    declare -g -a ns_main_REQUIRED=( 
+        sudo md5sum 
+        wc tee sed grep sort uniq xargs   
+        mkdir mktemp rm dd file mount umount
+        tar gzip rsync 
+        curl host netcat   
+        systemctl systemd-nspawn  
+    ) 
+
+    # optional dependency
+    declare -g -a ns_main_OPTIONAL=( 
+        pigz 7z 
+        nsenter 
+        # s3-get s3-put
+    ) 
+        
+}
+
+
 # setup shared variables 
-ns_init_all() {
+ns_init_all() { # keep order
     ns_init_val
     ns_init_state
     ns_init_config
+    ns_init_progs
+    ns_init_log
 }

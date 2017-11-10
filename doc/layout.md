@@ -38,7 +38,7 @@ managed by `nspawn.sh`
     runtime/    # live containers
         <machine-id>/   #  resources for this container
             conf/
-                <machine-id>.conf   # nspawn.sh configuration snapshot
+                nspawn.conf   # machine settings file
             work/
                 ... # overlay fs working folder
             root/

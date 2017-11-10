@@ -4,12 +4,13 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 source "${BASH_SOURCE%/*}/a.sh"
 
-test_ns_url_parse_1() {
+test_ns_url_parse_1() (
+    ns_init_all
     ns_log_args
     local url="http://user:pass@host/path/file?q1=a1&q2=b2#f1=c1&f2=d2"
     eval "$(ns_url_parse)" ; # local
@@ -27,9 +28,10 @@ test_ns_url_parse_1() {
     local $(ns_url_parse_fragment) ; # local
     assert_equal "$f1" "c1"
     assert_equal "$f2" "d2" ;  
-}
+)
 
-test_ns_url_parse_2() {
+test_ns_url_parse_2() (
+    ns_init_all
     ns_log_args
     local url="file:///path/file#type=abc"
     eval "$(ns_url_parse)" ; # local
@@ -43,7 +45,7 @@ test_ns_url_parse_2() {
     assert_equal "$url_fragment" "type=abc" # NB no quotes
     local $(ns_url_parse_fragment) ; #local
     assert_equal "$type" "abc" ;   
-}
+)
 
 test_ns_url_parse_1
 test_ns_url_parse_2

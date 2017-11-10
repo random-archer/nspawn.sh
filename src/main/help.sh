@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -14,13 +14,19 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 ns_help_text() {
     local name=$(ns_a_prog_name)
     local help=
-ns_a_define help << ns_EOF_HELP
+ns_a_define help << _HELP
 ----------------------------------------------------------------------------------
 
 USAGE:
     $name run=command/action [arguments]
 
 COMMAND / ACTION # DESCRIPTION
+
+    keep
+    
+        clean   # remove unused archive and extract image resources
+        install # create and activate periodic maintenance service units
+        remove  # deactivate and delete periodic maintenance service units 
 
     list 
     
@@ -53,6 +59,6 @@ EXAMPLE:
     $name run=unit/delete id=serv-arch-base-latest
 
 ----------------------------------------------------------------------------------
-ns_EOF_HELP
+_HELP
      echo "$help"
 }

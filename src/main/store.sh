@@ -4,12 +4,19 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
 # image store management
 #
+
+# FIXME too convoluted
+# detect if context refers to build image
+ns_store_has_build() {
+    #ns_log_note ${ns_STATE[main]} $url
+    [[ ${ns_STATE[main]} == "build" && $url == ${image[url]} ]]
+}
 
 # derive media_* descriptor form image type
 ns_store_media() { 
@@ -43,11 +50,6 @@ ns_store_media() {
     declare -p ${!media_*}
 }
 
-#
-ns_store_has_self() {
-    [[ $url == ${image[url]} ]]
-}
-
 # inject store_* name space
 ns_store_paths() { 
     local "$@" # url_*
@@ -59,7 +61,7 @@ ns_store_paths() {
     [[ $path =~ ^.+/$ ]] && path="${path}_" 
 
     # switch to '#build#' folder during self image build
-    ns_store_has_self && path="${ns_VAL[build_dir]}/$path" 
+    ns_store_has_build && path="${ns_VAL[build_dir]}/$path" 
     
     # image archive download
     local store_archive="${ns_VAL[archive_dir]}/$path"

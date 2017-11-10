@@ -4,14 +4,20 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
+
+#
+# remote http transport
+#
 
 # common curl options
 ns_curl_opts() { 
+    # url_host
     
     # resolve f.q.d.n. host name
-    local text="$(host -4 -W 3 $url_host)"
+    local wait=${ns_CONF[curl_host_wait]}
+    local text="$(host -4 -W $wait $url_host)"
     local list=($text)
     local host=${list[0]}
     
@@ -55,5 +61,5 @@ ns_curl_parse_header() {
 ns_curl_parse_last_modified() {
     local "$@" # content
     local header="last-modified"
-    echo "$(ns_curl_parse_header)"    
+    echo "$(ns_curl_parse_header)" # use sub shell
 }

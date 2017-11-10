@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#
+# network service unit
+#
+
 set -e -u
 
 [[ "$MACHINE_NAME" ]] || MACHINE_NAME="alp-$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1)" 

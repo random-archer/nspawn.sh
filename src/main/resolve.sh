@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -15,12 +15,16 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 ns_resolve_export_log() {
     ns_log_note "${resolve_log[@]}"
     
+    ns_a_has_declare machine_log
+        
     machine_log+=("${resolve_log[@]}")
 }
 
 # merge collected entries into machine
 ns_resolve_export_entry() { 
     ns_log_note "${resolve_entry[@]-}"
+    
+    ns_a_has_declare machine_entry
     
     # list values set
     local -a Environment=() BindReadOnly=() Bind=() Port=()
@@ -29,7 +33,7 @@ ns_resolve_export_entry() {
     local -A override 
     
     local entry= ; for entry in "${resolve_entry[@]-}" ; do
-        eval "$(ns_parse_entry)"
+        eval "$(ns_parse_entry)" # key val
         
         # list values, additive
         [[ $entry == Environment= ]] && Environment=() && continue #
@@ -43,8 +47,8 @@ ns_resolve_export_entry() {
         
         # solo values, override
         [[ $entry =~ ${ns_VAL[prof_all_override]} ]] && {
-            [[ $value == "" ]] && unset -v override["$key"] && continue # emtpy to erase
-            [[ $value != "" ]] && override["$key"]="$value" && continue
+            [[ $val == "" ]] && unset -v override["$key"] && continue # emtpy to erase
+            [[ $val != "" ]] && override["$key"]="$val" && continue
         }
          
         # keep last
@@ -69,6 +73,8 @@ ns_resolve_export_entry() {
 ns_resolve_export_overlay() {
     ns_log_note "${resolve_overlay[@]-}"
     
+    ns_a_has_declare machine_overlay
+        
     local entry=; for entry in "${resolve_overlay[@]-}" ; do
         if ! ns_a_array_contains array=machine_overlay ; then
             machine_overlay+=("$entry")
@@ -115,7 +121,7 @@ ns_resolve_apply() {
     
     # recurse depth first
     local url=; for url in "${image_overlay[@]-}" ; do
-#        [[ $url ]] || continue
+        [[ $url ]] || continue # TODO find why empty url
         ns_resolve_collect
     done
     
@@ -139,9 +145,9 @@ ns_resolve_collect() {
     
     # recurse first
     case "$media_type" in
-        "nspawn") ns_resolve_apply ;;
-        "plain")ns_log_dbug "plain has no media type" ;;
-        "aci") ns_log_fail "TODO aci" ;;
+        nspawn) ns_resolve_apply ;;
+        plain)ns_log_dbug "plain has no media type" ;;
+        aci) ns_log_warn "TODO aci" ;;
         *) false ;; # trap 
     esac
     

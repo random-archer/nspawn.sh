@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -33,7 +33,7 @@ ns_auth_conf() {
         
         local mode_form="$mode/$form"
         case "$mode_form" in
-            "basic/curl")
+            basic/curl)
                 ns_log_dbug "using '$mode_form' user='$user' pass='*'"
                 echo "--user $user:$pass" 
                 return 0 # on match 

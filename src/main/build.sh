@@ -4,21 +4,16 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
 # image build operations
 #
 
-# detect if context refers to build image
-#ns_build_has_self() {
-#    ns_log_note "$url"
-#    [[ ${ns_STATE[main]} == "build" && $url == ${image[url]} ]]
-#}
-
 # keep only build time entries
 ns_build_filter() { 
+    ns_log_dbug
     local build_entry=() 
     local filter_regex="${ns_VAL[prof_build_filter]}"
 
@@ -39,14 +34,15 @@ ns_build_mode_create() {
 
 # import machine env vars into build script environment
 ns_build_enviro() {
-    
+    ns_log_dbug
+        
     [[ ${ns_CONF[build_import_env]} == yes ]] || return 0
     
     local enviro_regex="^Environment=.+$"
     local entry= ; for entry in "${machine_entry[@]-}" ; do
         [[ $entry =~ $enviro_regex ]] || continue
-        eval "$(ns_parse_enviro)" # entry => key,value
-        declare -g $key="$value" # import global
+        eval "$(ns_parse_enviro)" # entry => key val
+        declare -g $key="$val" # import global
     done
 }
 
@@ -74,7 +70,7 @@ ns_build_create() {
 }
 
 ns_build_mode_delete() {
-    [[ ${ns_CONF[build_unit_keep]} == yes ]] && echo "skip" || echo "delete"
+    [[ ${ns_CONF[build_unit_keep]} == yes ]] && echo "ignore" || echo "delete"
 }
 
 # destroy build container
@@ -106,6 +102,6 @@ ns_build_reset() {
     # url => store_*
     eval "$(ns_store_space)"
         
-    ns_a_rmdir dir="$store_archive"
-    ns_a_rmdir dir="$store_extract"
+    ns_a_sudo rm -r -f "$store_archive"
+    ns_a_sudo rm -r -f "$store_extract"
 }

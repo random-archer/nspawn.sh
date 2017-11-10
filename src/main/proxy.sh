@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -37,26 +37,23 @@ ns_proxy_create() {
     ns_log_info "mode '$mode'"
     
     case "$mode" in
-        
-    none) return 0 ;;
-    
+        #
+    none) return 0 
+        ;;
     auto) # try env-var, then config
         http="${http_proxy:-${HTTP_PROXY:-${ns_CONF[proxy_http]}}}"             
         https="${https_proxy:-${HTTPS_PROXY:-${ns_CONF[proxy_https]}}}"             
         ;;
-        
     config) # use config only
         http="${ns_CONF[proxy_http]}"
         https="${ns_CONF[proxy_https]}"
         ;;
-        
     inherit) # use env-var only
         http="${http_proxy:-${HTTP_PROXY:-}}"             
         https="${https_proxy:-${HTTPS_PROXY:-}}"
         ;;
-                     
-    *) ns_log_fail "wrong mode '$mode'" ;;
-    
+    *) ns_log_fail "wrong mode '$mode'" 
+        ;;
     esac
         
     http=$(ns_proxy_test url=$http)

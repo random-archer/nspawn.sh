@@ -6,8 +6,15 @@
 
 set -e -u
 
-source "${BASH_SOURCE%/*}/a.sh"
+name="alp-serv"
 
-machine_pid=$(machinectl show --property Leader "$name" | sed "s/^Leader=//")
+# machine pid
+pid=$(machinectl show --property Leader --value "$name")
 
-sudo nsenter --target="$machine_pid" --mount --uts --ipc --net --pid /bin/sh
+# container environment
+vars=$(sudo cat /proc/$pid/environ | xargs -0)
+# invocation environment
+vars="$vars TERM=$TERM"
+    
+# join name space with environment
+sudo nsenter --target=$pid --mount --uts --ipc --net --pid env -i - $vars sh

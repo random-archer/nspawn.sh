@@ -4,18 +4,39 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
 # parser utilities
 #
 
-# split key=value entry
+# split key=val entry
 ns_parse_entry() { 
-    local "$@" 
-    local key="${entry%%=*}" value="${entry#*=}" 
-    declare -p key value
+    local "$@" # entry
+    local key="${entry%%=*}" val="${entry#*=}" 
+    declare -p key val
+}
+
+
+# convert form list key=val into map[key]=val
+ns_parse_to_map() {
+    local "$@" # key=val ...
+    declare -A map=() 
+    local entry=; for entry in "$@" ; do
+        eval "$(ns_parse_entry)"
+        map[$key]="$val"
+    done
+    declare -p map    
+}
+
+# find key=val entry with key
+ns_parse_find() {
+    local "$@" # key array
+    local -n list="$array" # de-reference
+    local entry=; for entry in "${list[@]}" ; do
+        [[ $entry == "$key="* ]] && echo "$entry"
+    done 
 }
 
 # make quoted key="value" entry
@@ -47,12 +68,25 @@ ns_parse_rem_quote_single() {
 } 
 
 # remove double quotes
-ns_parse_rem_quote_double() { 
+ns_parse_rem_quote_double() {
     local text="$1" 
     text="${text#\"}" 
     text="${text%\"}" 
     echo -n "$text" 
 } 
+
+# remove single or double quotes
+ns_parse_rem_quote_any() {
+    local text="$1" 
+    if ns_parse_has_quote_double "$text" ; then
+        ns_parse_rem_quote_double "$text"
+    elif ns_parse_has_quote_single "$text" ; then
+        ns_parse_rem_quote_single "$text"
+    else
+        echo -n "$text" 
+    fi
+}
+
 
 # parse url parameters: k1=v1&k2=v2&...
 ns_parse_ampersand() { 
@@ -64,13 +98,14 @@ ns_parse_ampersand() {
     local
 }
 
+# extract scalar 'declare -- a="b"'
 ns_parse_declare() {
     local "$@" # entry
     local key= val=
     key=${entry#declare -- }
     key=${key%%=*}
     val=${entry#*=}
-    val=$(ns_parse_rem_quote_double "$val")
+    val=$(ns_parse_rem_quote_any "$val")
     declare -p key val
 }
 
@@ -78,12 +113,11 @@ ns_parse_declare() {
 # Environment="KEY=SOME VALUE"
 ns_parse_enviro() {
     local "$@" # entry
-    eval "$(ns_parse_entry)" # remove prefix
-    if ns_parse_has_quote_double "$value" ; then
-        entry=$(ns_parse_rem_quote_double "$value") # remove quotes
-    elif ns_parse_has_quote_single "$value" ; then
-        entry=$(ns_parse_rem_quote_single "$value") # remove quotes
-    fi
-    eval "$(ns_parse_entry)" # extract variable
-    declare -p key value
+    # remove prefix
+    eval "$(ns_parse_entry)" # key val
+    # remove quotes
+    entry=$(ns_parse_rem_quote_any "$val")
+    # extract variable
+    eval "$(ns_parse_entry)" # key val 
+    declare -p key val
 }

@@ -11,11 +11,11 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 # verify image build
 #
 
-set -o posix # use standard mode
 set -o nounset # fail on unset variables
-set -o errexit  # fail on non-zero function return
-set -o errtrace # apply ERR trap throughout call stack 
-set -o functrace # apply DEBUG and RETURN trap throughout the stack
+set -o errexit  # fail on any non-zero return
+set -o pipefail # fail on any internal pipe error
+set -o errtrace # apply ERR trap throughout call stack
+set -o functrace # apply DEBUG and RETURN trap throughout the stack 
 
 # use project artifact 
 #proj=$(git rev-parse --show-toplevel)

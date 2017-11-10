@@ -28,6 +28,13 @@ main() {
 
 ### safe return status
 
+to ignore return status: 
+
+```
+# ignore non-zero return value 
+... || true
+```
+
 when using `set -e`, the following are safe:
 
 ```

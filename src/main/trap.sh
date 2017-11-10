@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -12,7 +12,6 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 #
 
 # note:
-#   'exit' in sub shell is 'return'
 #   command substitution '$()' does inherit trap
 #   full sub shell invocation '()' or 'cmd &' does not inherit trap 
 
@@ -25,26 +24,26 @@ ns_trap_on_int() {
 
 # trap all forms of exit; runs only in main shell; use for cleanup;
 ns_trap_on_exit() {
+    
     # trapped exit
     local code="$?"
+    ns_log_dbug nest=$BASH_SUBSHELL code=$code
+    
     # debug trace
-    ns_log_dbug nest=$BASH_SUBSHELL
+    ns_trap_has_do_exit || ns_log_trap type="script error"
+    
     # process hooks
     ns_trap_fire_exit
+    
     # display final step
     ns_exit state="${ns_STATE[terminate]}" code="$code"
+    
 } 
 
 # trap script runtime: non-zero return / programming error
-ns_trap_on_error() { 
-    local "$@"
-    local nest="$BASH_SUBSHELL"
-    local exec="$BASH_COMMAND"
-    local line="${BASH_LINENO[0]}"
-    local file="${BASH_SOURCE[1]##*/}" 
-    local stack="${FUNCNAME[*]}"; stack=${stack// / <- }
-    local code="$file:$line"
-    ns_log_warn "nest=$nest code='$code' exec='$exec' stack='$stack'"
+ns_trap_on_error() {
+    ns_log_dbug
+    ns_log_trap type="return value"
     ns_trap_do_error
 }
 
@@ -74,11 +73,13 @@ ns_trap_send_sub_error() {
 # process 'exit' hooks
 ns_trap_fire_exit() {
     local entry=; for entry in "${ns_trap_HOOK_EXIT[@]-}" ; do
-        ns_log_note "$entry"
-        $entry # invoke
+        local header=${entry%% *} # parse command
+        ns_log_note "$header" # report command
+        $entry # invoke hook
     done
 }
 
+# FIXME unused
 # terminate with success
 ns_trap_do_exit() {
     local "$@"
@@ -86,39 +87,46 @@ ns_trap_do_exit() {
     ns_trap_terminate state="ok" code=0
 }
 
-# terminate main/sub shell with error
+# terminate shell with error
 ns_trap_do_error() {
     ns_log_dbug nest=$BASH_SUBSHELL
     ns_trap_send_sub_error # propagate
-    ns_trap_terminate state="error" code=1
+    ns_trap_terminate state="error" code=101
 }
 
-# terminate main shell from user input
+# terminate shell from user input
 ns_trap_do_interrupt() { 
     ns_log_dbug 
-    ns_trap_terminate state="interrupt" code=2
+    ns_trap_terminate state="interrupt" code=102
 }
 
-# program exit
+# detect if exit is trap-initiated
+ns_trap_has_do_exit() {
+    local "$@" # code
+    [[ $code == 0 || $code == 101 || $code == 102 ]]
+}
+
+# program real exit
 ns_trap_terminate() {
     ns_log_dbug nest=$BASH_SUBSHELL
     local "$@" # state code
     ns_STATE[terminate]="$state"
     
+    # developer mode
     if [[ ${ns_CONF[dbug_trap_skip_exit]} == yes ]] ; then
         ns_log_dbug "dbug_trap_skip_exit"
         return 0
     fi
     
-    # does 'return' in sub shell
+    # program real exit
     exit $code
 }
 
-# setup interrupts
+# setup interrupt
 ns_trap_init() {
     ns_log_dbug nest=$BASH_SUBSHELL
     
-    # signal handlers
+    # signal handler
     trap ns_trap_on_int INT # user crtl+c
     trap ns_trap_on_exit EXIT # script terminate
     trap ns_trap_on_error ERR # script logic errors

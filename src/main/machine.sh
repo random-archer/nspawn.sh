@@ -4,7 +4,7 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 #
@@ -35,9 +35,9 @@ ns_machine_assert_missing() {
 }
 
 # defined machine resources
-ns_machine_folder_list() {
+ns_machine_folder_list() { 
     ns_log_note
-    local key= ; for key in ${machine[folder_list]} ; do
+    local key= ; for key in ${machine[folder_list]-} ; do
         echo "${machine[$key]}"
     done
 }
@@ -54,8 +54,8 @@ ns_machine_resource() {
     local "$@" ; ns_log_req --dbug mode
     local path=; for path in $(ns_machine_folder_list) ; do
        case "$mode" in
-           "create") ns_a_mkdir dir="$path" ;;
-           "delete") ns_a_rmdir dir="$path" ;;
+           create) ns_a_sudo mkdir -p "$path" ;;
+           delete) ns_a_sudo rm -r -f "$path" ;;
            *) false ;; # trap
        esac
     done 
@@ -96,24 +96,27 @@ ns_machine_define() {
     # assert
     ns_a_has_declare machine
     
+     # locally unique machine id
+    local id="$name"
+    
     # properties
-    machine[id]="$name" # locally unique id
+    machine[id]="$id"
 
     # /etc/systemd/...
-    machine[profile_file]="${ns_VAL[profile_dir]}/${machine[id]}.nspawn" # service unit properties
-    machine[service_file]="${ns_VAL[service_dir]}/${machine[id]}.service" # systemd service unit file 
+    machine[profile_file]=$(ns_conf_profile_file) # service unit properties
+    machine[service_file]=$(ns_conf_service_file) # systemd service unit file 
                 
     # /var/lib/machines/...
-    machine[machine_dir]="${ns_VAL[machine_dir]}/${machine[id]}" # systemd mount folder
+    machine[machine_dir]=$(ns_conf_machine_dir) # systemd mount folder
     
     # /var/lib/nspawn.sh/...
-    machine[base_dir]="${ns_VAL[runtime_dir]}/${machine[id]}" # machine resources
-    machine[conf_dir]="${machine[base_dir]}/${ns_VAL[conf_dir]}" # container settings files
-    machine[root_dir]="${machine[base_dir]}/${ns_VAL[root_dir]}" # container root file system
-    machine[work_dir]="${machine[base_dir]}/${ns_VAL[work_dir]}" # container overlay work folder
-    machine[zoom_dir]="${machine[base_dir]}/${ns_VAL[zoom_dir]}" # container overlay bottom folder (build)
+    machine[base_dir]=$(ns_conf_runtime_dir) # machine resources
+    machine[conf_dir]=$(ns_conf_runtime_conf_dir) # container settings files
+    machine[root_dir]=$(ns_conf_runtime_root_dir) # container root file system
+    machine[work_dir]=$(ns_conf_runtime_work_dir) # container overlay work folder
+    machine[zoom_dir]=$(ns_conf_runtime_zoom_dir) # container overlay bottom folder (build)
+    machine[conf_file]=$(ns_conf_runtime_conf_file) # nspawn.sh container descriptor
     machine[folder_list]="conf_dir root_dir work_dir zoom_dir base_dir machine_dir" # required runtime folders
-    machine[conf_file]="${machine[conf_dir]}/${ns_VAL[conf_file]}" # nspawn.sh container descriptor
         
 }
 

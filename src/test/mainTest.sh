@@ -4,12 +4,13 @@
 # This file is part of https://github.com/random-archer/nspawn.sh
 
 # import source once
-___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -r $___=@" ;
+___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval "declare -gr $___=@" ;
 #!
 
 source "${BASH_SOURCE%/*}/a.sh"
 
 test_ns_main_bash_assert() (
+    ns_init_all
     ns_log_args
     ns_main_bash_assert
 )

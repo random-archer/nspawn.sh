@@ -1,7 +1,7 @@
 #!/bin/bash
 
-set -e -u
+#
+# upgrade container images
+#
 
-source "${BASH_SOURCE%/*}/a.sh"
-
-nspawn.sh run=unit/upgrade name="$name" url="$url"
+source "${BASH_SOURCE%/*}/a.sh" mode=upgrade
