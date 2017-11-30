@@ -111,7 +111,7 @@ ns_do_copy() {
     
     ns_a_mkpar file="$target"
     
-    ns_a_sudo rsync -a --no-o --no-g "$source" "$target"
+    ns_a_sudo rsync -a --force --no-o --no-g "$source" "$target"
 }
 
 ns_do_def() {
@@ -132,8 +132,9 @@ ns_do_get() {
     local file="$(mktemp -u)"
     
     eval "$(ns_url_parse)"
-    local curl_cmd="curl $(ns_curl_opts_get)"
-    local curl_text=$(ns_a_sudo $curl_cmd --output "$file" "$url")
+    eval "$(ns_curl_opts_get)"
+    local curl_cmd=(curl "${curl_opts[@]}")
+    local curl_text=$(ns_a_sudo "${curl_cmd[@]}" --output "$file" --url "$url")
     
     local src="$file"
     local dst="$path"
@@ -195,10 +196,12 @@ ns_do_run_sysd() {
     
     local machine=${machine[id]}
     
+    # TODO expose to config
     local args=(
         --quiet
+        --register=yes
         --machine "$machine"
-        --uuid=$(ns_a_guid) # TODO expose to config
+        --uuid=$(ns_a_guid)
     )
     
     ns_a_sudo systemd-nspawn "${args[@]}" "$@" || ns_log_fail "systemd-nspawn failure" 
@@ -261,7 +264,7 @@ ns_do_sync() {
     ns_a_sudo mkdir -p "$store_extract"
     
     # transfer from transient to permanent store 
-    ns_a_sudo rsync -a "$root_dir"/ "$store_extract"
+    ns_a_sudo rsync -a --force "$root_dir"/ "$store_extract"
 }
 
 # 

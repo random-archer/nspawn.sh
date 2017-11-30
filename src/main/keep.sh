@@ -35,6 +35,9 @@ ns_keep_image_list() {
         # machine settings
         local file=$(ns_conf_runtime_conf_file id="$name")
         
+        # skip broken builds
+        [[ -f $file ]] || continue
+        
         # inject machine settings
         eval "$(ns_context_machine_load)" # file 
 

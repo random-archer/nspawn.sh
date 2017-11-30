@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# tester instance setup
+# test container instance setup
 #
 
 set -e -u -x
@@ -12,7 +12,7 @@ docker_pull
 
 docker_inst
 
-docker_exec $pacrun -S "${package_list[@]}"
+docker_exec $pacrun --sync "${package_list[@]}"
 
 sysd_wait_active unit=dbus
 

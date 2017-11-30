@@ -131,11 +131,11 @@ ns_init_config() {
         'move' : atomic folder replace, not safe for update; \
         'sync' : individual file update, safe for live instance update; \
     "
-                        
+    
     ns_CONF[run_shell]="/bin/sh"
     ns_help_CONF[run_shell]="shell path in the container"
                                                                                                 
-    ns_CONF[curl_opts]="--insecure --silent --show-error --fail --location"
+    ns_CONF[curl_opts]="--insecure --silent --show-error --fail --location --connect-timeout 3"
     ns_help_CONF[curl_opts]="curl invocation options for both get and put"
 
     ns_CONF[curl_host_wait]="3"

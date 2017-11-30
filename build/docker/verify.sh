@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# invoke tests in docker
+# invoke tests in systemd context
 #
 
 set -e -u -x

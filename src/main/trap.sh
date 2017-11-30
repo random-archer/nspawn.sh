@@ -38,7 +38,20 @@ ns_trap_on_exit() {
     # display final step
     ns_exit state="${ns_STATE[terminate]}" code="$code"
     
-} 
+}
+
+# trap force terminate
+ns_trap_on_term() {
+    ns_log_dbug
+    
+    # terminate process descendants
+    kill -KILL $(ps -o pid= --ppid $$) || true
+    
+    # process hooks
+    ns_trap_fire_exit
+        
+    exit 127
+}
 
 # trap script runtime: non-zero return / programming error
 ns_trap_on_error() {
@@ -129,6 +142,7 @@ ns_trap_init() {
     # signal handler
     trap ns_trap_on_int INT # user crtl+c
     trap ns_trap_on_exit EXIT # script terminate
+#    trap ns_trap_on_term TERM # script force terminate
     trap ns_trap_on_error ERR # script logic errors
     trap ns_trap_on_sub_error USR1 # inter-shell signal
 

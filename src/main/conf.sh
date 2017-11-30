@@ -95,5 +95,5 @@ ns_conf_runtime_conf_file() {
 
 # transient reports
 ns_conf_report_dir() {
-    echo "$(ns_a_temp_dir)/$(ns_a_prog_sign)"
+    echo "$(ns_a_temp_dir)/$(ns_a_prog_sign)/report"
 }

@@ -127,12 +127,13 @@ ns_image_push_put() {
     
     case "$url" in
         http*)
-            local curl_cmd="curl $(ns_curl_opts_put)"
-            local curl_text=$(ns_a_sudo $curl_cmd --upload-file "$store_archive" "$url")
+            eval "$(ns_curl_opts_put)"
+            local curl_cmd=(curl "${curl_opts[@]}")
+            local curl_text=$(ns_a_sudo "${curl_cmd[@]}" --upload-file "$store_archive" --url "$url")
             ;;
         file*)
             ns_a_mkpar file="$url_path"
-            ns_a_sudo rsync -a "$store_archive" "$url_path"
+            ns_a_sudo rsync -a --force "$store_archive" "$url_path"
             ;;
         s3*)
             false # TODO
@@ -208,10 +209,12 @@ ns_image_pull_get() {
     
     case "$url" in
         http*)
-            local curl_cmd="curl $(ns_curl_opts_get)"
+            eval "$(ns_curl_opts_get)"
+                        
+            local curl_cmd=(curl "${curl_opts[@]}")
 
             # remote time stamp
-            local head_text=$(ns_a_sudo $curl_cmd --head "$url")
+            local head_text=$(ns_a_sudo "${curl_cmd[@]}" --head --url "$url")
             local time_stamp=$(ns_curl_parse_last_modified content="$head_text")
             local stamp_file="$store_archive.stamp" 
             ns_a_sudo touch --date="$time_stamp" "$stamp_file"
@@ -222,7 +225,7 @@ ns_image_pull_get() {
             else
                 ns_log_info "source: '$url'"
                 local store_tmpfile=$(mktemp) # avoid partial download
-                local curl_text=$(ns_a_sudo $curl_cmd --output "$store_tmpfile" "$url")
+                local curl_text=$(ns_a_sudo "${curl_cmd[@]}" --output "$store_tmpfile" --url "$url")
                 ns_a_sudo mv -f "$store_tmpfile" "$store_archive" # atomic change
                 ns_a_sudo touch -d "$time_stamp" "$store_archive" # sync with remote
                 ns_log_info "target: '$store_archive'"
@@ -230,7 +233,7 @@ ns_image_pull_get() {
             ns_a_sudo rm -f "$stamp_file"
             ;;
         file*)
-            ns_a_sudo rsync -a "$url_path" "$store_archive"
+            ns_a_sudo rsync -a --force "$url_path" "$store_archive"
             ;;
         s3*)
             false # TODO
@@ -295,7 +298,7 @@ ns_image_pull_unpack() {
             ns_a_sudo mv -f "$store_tempdir" "$store_extract"
             ;;
         sync) # individual file update
-            ns_a_sudo rsync -a "$store_tempdir"/ "$store_extract" # note "/"
+            ns_a_sudo rsync -a --force "$store_tempdir"/ "$store_extract" # note "/"
             ns_a_sudo rm -r -f "$store_tempdir" # cleanup
             ;;
         *)

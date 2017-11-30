@@ -63,7 +63,7 @@ docker_logs() {
 sysd_is_active() {
    local "$@" # unit
    local active=$(docker_exec systemctl is-active $unit)
-   [[ $active == active* ]] 
+   [[ $active == active* ]] # ignore tail '\r' from docker 
 }
 
 # await system service is running
@@ -80,7 +80,7 @@ sysd_wait_active() {
    done
 }
 
-# show system services 
+# show system services
 sysd_report_status() {
    docker_exec systemctl status --no-pager $@
 }

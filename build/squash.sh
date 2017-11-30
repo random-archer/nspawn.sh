@@ -6,10 +6,12 @@
 
 set -e -u
 
-# 2017-10-23 10:29:32
-point=383383fb672d096797bde519c3f49f08f7c4bb46
+# 2017-11-10
+point=ef46572d76af7f31b89100f07fdeb963dd24fbc4
 
 git reset --soft $point
+
+git add -A
 
 git commit -m "develop"
 

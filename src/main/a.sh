@@ -107,7 +107,7 @@ ns_a_args_assert() {
 
 # verify entry is present in array
 ns_a_array_contains() { 
-    local "$@" # array entry
+    local "$@" # @array entry
     local -n list="$array" # de-reference
     local item=; for item in "${list[@]-}" ; do 
         [[ $item == $entry ]] && return 0 # present
@@ -115,6 +115,16 @@ ns_a_array_contains() {
     return 1 # missing
 }
 
+# join array into string with separator 
+ns_a_array_join() {
+    local "$@" # @array separ
+    local -n list="$array" # de-reference
+    local line="${list[0]-}"
+    local item=; for item in "${list[@]:1}" ; do 
+        line+="$separ$item"
+    done
+    echo "$line"
+}
 
 # remove head/tail whitespace characters
 ns_a_trim() { 

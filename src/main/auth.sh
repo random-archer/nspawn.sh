@@ -11,37 +11,54 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 # image server authentication
 #
 
+# parse path to list
+ns_auth_path() {
+    local IFS=':'
+    local auth_path=( ${ns_CONF[auth_path]} )
+    unset IFS
+    declare -p auth_path
+}
+
 # discover remote auth config
 ns_auth_conf() { 
-    local "$@" ; ns_log_req url form
+    local "$@" ; ns_log_req url kind
     
     eval "$(ns_url_parse)"
     
-    # configuration locations
-    local auth_path=${ns_CONF[auth_path]//':'/' '}
+    eval "$(ns_auth_path)"
     
-    local entry=; for entry in $auth_path ; do
+    local auth_conf=()
+    
+    local entry=; for entry in "${auth_path[@]-}" ; do
         
         # per-host configuration
-        local path="$entry/${url_host}.conf"
+        local path="${entry}/${url_host}.conf"
         
         # configuration is optional
         [[ -e $path ]] || continue
         
-        # inject parameters
-        eval "$(source "$path" && declare -p mode user pass)"
+        # inject auth parameters
+        local mode= user= pass= token=
+        source "$path"
         
-        local mode_form="$mode/$form"
-        case "$mode_form" in
-            basic/curl)
-                ns_log_dbug "using '$mode_form' user='$user' pass='*'"
-                echo "--user $user:$pass" 
-                return 0 # on match 
+        local kind_mode="$kind/$mode"
+        case "$kind_mode" in
+            http/basic)
+                ns_log_dbug "using '$kind_mode' user='$user' pass='*'"
+                auth_conf+=(--basic --user "$user:$pass")
+                break
+                ;;
+            http/token)
+                ns_log_dbug "using '$kind_mode' token='*'"
+                auth_conf+=(--header "Authorization: Token $token")
+                break 
                 ;;
             *) 
-                ns_log_fail "wrong mode/form='$mode_form'" 
+                ns_log_fail "wrong kind/mode='$kind_mode'" 
                 ;;
         esac
           
     done
+    
+    declare -p auth_conf
 }

@@ -105,6 +105,19 @@ END
     assert_equal "$text" "    hello-kitty    #"
 )
 
+test_ns_a_array_join() (
+    ns_init_all
+    ns_log_args
+    local terms=(one)
+    local separ="<->"
+    local result=$(ns_a_array_join array=terms)
+    assert_equal "$result" "one"
+    local terms=(one two)
+    local separ="<->"
+    local result=$(ns_a_array_join array=terms)
+    assert_equal "$result" "one<->two"
+)
+
 test_ns_a_define
 test_ns_a_text_hash
 test_ns_a_guid_char
@@ -114,3 +127,4 @@ test_ns_a_has_declare
 test_ns_a_read_declare
 test_ns_a_char_reps
 test_ns_a_path_explode
+test_ns_a_array_join

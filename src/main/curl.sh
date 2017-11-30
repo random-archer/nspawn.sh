@@ -8,11 +8,11 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 #!
 
 #
-# remote http transport
+# common transport
 #
 
 # common curl options
-ns_curl_opts() { 
+ns_curl_opts_any() { 
     # url_host
     
     # resolve f.q.d.n. host name
@@ -21,25 +21,41 @@ ns_curl_opts() {
     local list=($text)
     local host=${list[0]}
     
-    local opts_host="--header Host:$host"
-    local opts_conf="${ns_CONF[curl_opts]}"
-    local opts_auth="$(ns_auth_conf form=curl)" 
+    eval "$(ns_auth_conf kind=http)"
     
-    echo "$opts_host $opts_conf $opts_auth $opts_more"
+    local opts_host=(--header "Host: $host")
+    local opts_conf=(${ns_CONF[curl_opts]})
+    
+    local curl_list=(
+        --disable # keep first
+        "${opts_more[@]-}"
+        "${opts_host[@]-}"
+        "${opts_conf[@]-}"
+        "${auth_conf[@]-}"
+    )
+    
+    local curl_opts=()
+    local item=; for item in "${curl_list[@]}" ; do
+        [[ $item ]] && curl_opts+=("$item") # skip empty
+    done 
+
+    declare -p curl_opts                
 }
 
 # curl options for pull
 ns_curl_opts_get() {
-    local opts_more=""
-    [[ ${ns_CONF[proxy_on_get]} == yes ]] || opts_more="--noproxy $url_host"
-    ns_curl_opts
+    # url_host
+    local opts_more=()
+    [[ ${ns_CONF[proxy_on_get]} == yes ]] || opts_more+=(--noproxy "$url_host")
+    ns_curl_opts_any
 }   
 
 # curl options for push
 ns_curl_opts_put() {
-    local opts_more=""
-    [[ ${ns_CONF[proxy_on_put]} == yes ]] || opts_more="--noproxy $url_host"
-    ns_curl_opts
+    # url_host
+    local opts_more=()
+    [[ ${ns_CONF[proxy_on_put]} == yes ]] || opts_more+=(--noproxy "$url_host")
+    ns_curl_opts_any
 }
 
 # parse single http header form response content
