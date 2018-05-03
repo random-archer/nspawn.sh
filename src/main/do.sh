@@ -111,7 +111,9 @@ ns_do_copy() {
     
     ns_a_mkpar file="$target"
     
-    ns_a_sudo rsync -a --force --no-o --no-g "$source" "$target"
+    # FIXME config
+    # drop local attributes
+    ns_a_rsync --no-o --no-g --no-A --no-X "$source" "$target"
 }
 
 ns_do_def() {
@@ -264,7 +266,7 @@ ns_do_sync() {
     ns_a_sudo mkdir -p "$store_extract"
     
     # transfer from transient to permanent store 
-    ns_a_sudo rsync -a --force "$root_dir"/ "$store_extract"
+    ns_a_rsync "$root_dir"/ "$store_extract"
 }
 
 # 

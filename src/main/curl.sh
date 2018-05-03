@@ -23,7 +23,7 @@ ns_curl_opts_any() {
     
     eval "$(ns_auth_conf kind=http)"
     
-    local opts_host=(--header "Host: $host")
+    local opts_host=(--header "Host:$host")
     local opts_conf=(${ns_CONF[curl_opts]})
     
     local curl_list=(

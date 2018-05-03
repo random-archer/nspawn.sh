@@ -133,7 +133,7 @@ ns_image_push_put() {
             ;;
         file*)
             ns_a_mkpar file="$url_path"
-            ns_a_sudo rsync -a --force "$store_archive" "$url_path"
+            ns_a_rsync "$store_archive" "$url_path"
             ;;
         s3*)
             false # TODO
@@ -233,7 +233,7 @@ ns_image_pull_get() {
             ns_a_sudo rm -f "$stamp_file"
             ;;
         file*)
-            ns_a_sudo rsync -a --force "$url_path" "$store_archive"
+            ns_a_rsync "$url_path" "$store_archive"
             ;;
         s3*)
             false # TODO
@@ -298,7 +298,7 @@ ns_image_pull_unpack() {
             ns_a_sudo mv -f "$store_tempdir" "$store_extract"
             ;;
         sync) # individual file update
-            ns_a_sudo rsync -a --force "$store_tempdir"/ "$store_extract" # note "/"
+            ns_a_rsync "$store_tempdir"/ "$store_extract" # note "/"
             ns_a_sudo rm -r -f "$store_tempdir" # cleanup
             ;;
         *)

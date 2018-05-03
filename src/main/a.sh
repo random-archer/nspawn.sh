@@ -37,6 +37,11 @@ ns_a_sudo() {
 ns_a_suno() {
     ns_a_has_root && echo "" || echo "sudo -E"
 }
+
+# high fidelity copy
+ns_a_rsync() {
+     ns_a_sudo rsync -a -A -X --force "$@"
+}
     
 # detect root user
 ns_a_has_root() { 
