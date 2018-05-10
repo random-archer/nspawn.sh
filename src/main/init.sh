@@ -201,7 +201,10 @@ ns_init_config() {
     
     ns_CONF[proxy_on_put]=no
     ns_help_CONF[proxy_on_put]="enable proxy during image upload/push"
-                                                                          
+
+    ns_CONF[proxy_not]="localhost,image"
+    ns_help_CONF[proxy_not]="comma separated list of hosts excluded from proxy"
+                                                                                                                                                                                                                                                                                                        
     ns_help_BUILD[CONFIG]="key=value, ... # control $(ns_a_prog_name) settings, such as proxy setup, logging, etc."
     ns_help_BUILD[IMAGE]="url=... # declare image url, which is both image id and the upload location"
     ns_help_BUILD[PULL]="url=... # transitively download remote image and make it part of container overlay"

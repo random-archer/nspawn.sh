@@ -11,26 +11,33 @@ ___="source_${BASH_SOURCE//[![:alnum:]]/_}" ; [[ ${!___-} ]] && return 0 || eval
 # common transport
 #
 
-# common curl options
-ns_curl_opts_any() { 
-    # url_host
-    
-    # resolve f.q.d.n. host name
+# resolve f.q.d.n. host name
+ns_curl_host() {
     local wait=${ns_CONF[curl_host_wait]}
     local text="$(host -4 -W $wait $url_host)"
     local list=($text)
     local host=${list[0]}
+    echo "$host"
+}
+
+# common curl options
+ns_curl_opts_any() { 
+    # url_host
+    
+    local host=$(ns_curl_host)
     
     eval "$(ns_auth_conf kind=http)"
     
-    local opts_host=(--header "Host:$host")
     local opts_conf=(${ns_CONF[curl_opts]})
+    local opts_host=(--header "Host:$host")
+    local opts_prox=(--noproxy ${ns_CONF[proxy_not]})
     
     local curl_list=(
         --disable # keep first
         "${opts_more[@]-}"
         "${opts_host[@]-}"
         "${opts_conf[@]-}"
+        "${opts_prox[@]-}"
         "${auth_conf[@]-}"
     )
     
