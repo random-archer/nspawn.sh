@@ -43,7 +43,7 @@ ns_resolve_export_entry() {
         [[ $entry == Bind= ]] && Bind=() && continue #
         [[ $entry =~ Bind= ]] && Bind+=("$entry") && continue
         [[ $entry == Port= ]] && Port=() && continue #
-        [[ $entry =~ Port= ]] && Port=+=("$entry") && continue
+        [[ $entry =~ Port= ]] && Port+=("$entry") && continue
         
         # solo values, override
         [[ $entry =~ ${ns_VAL[prof_all_override]} ]] && {
