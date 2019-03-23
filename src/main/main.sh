@@ -127,6 +127,8 @@ ns_main_has_script() {
 
 # verify shell interpreter
 ns_main_bash_assert() {
+	#TODO
+	return 0
     local major=${BASH_VERSINFO[0]}
     local minor=${BASH_VERSINFO[1]}
     if (( major >= 4 )) && (( minor >= 4 )) ; then
